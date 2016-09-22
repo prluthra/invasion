@@ -6,9 +6,24 @@ Created on Mon Sep 19 07:26:12 2016
 """
 #==============================================================================
 # Microsoft Malware Challenge 
-# Input : Byte files,Training file names, Test file names, Training Labels
-# Outputs file with labels(predictions) of malware families as outputfinal1.txt
-# Outputs sorted labels in textfile as outputfinal2.txt
+# Input : Command line arguements as described below.
+# Outputs file with labels(predictions) of malware families as outputfinal1.txt => str<filename label> 
+# Outputs sorted labels in textfile as outputfinal2.txt => int(label)
+# Accuracy = 95%
+# RunTime = 38 min(approx) on 2 r3.4xlarge nodes with parameters as specified in Readme.
+# This is final script which takes 5 command line arguements:<bytePath> <namePath> <nameTestPath> <classPath> <aws_id> <aws_key>
+#bytePath = "s3n://eds-uga-csci8360/data/project2/binaries" 
+#//s3 path for folder with all .byte files
+#namePath = "s3n://eds-uga-csci8360/data/project2/labels/X_train.txt"
+#//s3 path for file having file names of training docs
+#nameTestPath="s3n://eds-uga-csci8360/data/project2/labels/X_test.txt"
+#//s3 path for file having file names of test docs
+#classPath = "s3n://eds-uga-csci8360/data/project2/labels/y_train.txt"
+#//s3 path for file having labels/classes of training docs
+#aws_id = “xxxx”
+#//your aws id
+#aws_key = “xxxx”
+#//your aws key
 #==============================================================================
 
 #Imports
