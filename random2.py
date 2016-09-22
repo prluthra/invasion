@@ -7,8 +7,8 @@ Created on Mon Sep 19 07:26:12 2016
 #==============================================================================
 # Microsoft Malware Challenge 
 # Input : Byte files,Training file names, Test file names, Training Labels
-# Outputs file with labels(predictions) of malware families as output.txt
-# Outputs sorted labels in textfile as finalOutput.txt
+# Outputs file with labels(predictions) of malware families as outputfinal1.txt
+# Outputs sorted labels in textfile as outputfinal2.txt
 #==============================================================================
 
 #Imports
