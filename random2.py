@@ -115,7 +115,7 @@ def main():
                                       impurity='gini', maxDepth=8, maxBins=32)
                                 
 #==============================================================================
-# Section 5: Generate test data in the format for prediction. O/P of section: ()                        
+# Section 5: Generate test data in the format for prediction. O/P of section: (INDEX,(INDEX,FILENAME,TF))                       
 #==============================================================================
                                       
     #O/P: (INDEX,FILENAME)
