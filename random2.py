@@ -43,26 +43,17 @@ def main():
 #==============================================================================
     sc = SparkContext(conf = SparkConf().setAppName("Random Forest"))
     sqlContext = SQLContext(sc)
-    sc._jsc.hadoopConfiguration().set('fs.s3n.awsAccessKeyId', 'AKIAIDK6PJ66SKUH72IQ')
-    sc._jsc.hadoopConfiguration().set('fs.s3n.awsSecretAccessKey', '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')
+    sc._jsc.hadoopConfiguration().set('fs.s3n.awsAccessKeyId', sys.argv[5])
+    sc._jsc.hadoopConfiguration().set('fs.s3n.awsSecretAccessKey', sys.argv[6])
 #==============================================================================
 # Specify file paths on s3
 #==============================================================================
-    a = str(sys.argv)
-    bytePath = "s3n://eds-uga-csci8360/data/project2/binaries"
-    namePath = "s3n://eds-uga-csci8360/data/project2/labels/X_train.txt"
-    nameTestPath="s3n://eds-uga-csci8360/data/project2/labels/X_test.txt"
-    classPath = "s3n://eds-uga-csci8360/data/project2/labels/y_train.txt"
-    print "byte path"
-    print sys.argv[1]
-    print "name Path"
-    print sys.argv[2]
-    print "nameTestPath"
-    print sys.argv[3]
-    print "classPath"
-    print sys.argv[4]
-    print sys.argv[5]
-    print sys.argv[6]
+
+    bytePath = sys.argv[1]
+    namePath = sys.argv[2]
+    nameTestPath= sys.argv[3]
+    classPath = sys.argv[4]
+
 #==============================================================================
 # Section 1: GETTING TF OF .BYTE FILES, O/P OF SECTION :(FILE NAME, TF)
 #
@@ -72,14 +63,10 @@ def main():
 
     #O/P: (FILENAME,TEXT)
     docData= sc.wholeTextFiles(bytePath, 25).map(lambda (x,y):(x.encode("utf-8"),y.encode("utf-8")))
-    print "docData printing"
-    docData.take(1)
-    print "total samples in docData"
-    docData.count()
+    
     #O/P: (FILENAME, CLEANED TEXT)
     cleanDocData = docData.map(lambda (x,y): (x,clean(y.split())))
-    print "cleanDocData printing"
-    cleanDocData.take(1)
+
     #O/P: Hashing TF arguement -> 256 + 1 (for "??") features
     x = 16**2 + 1
     hashingTF = HashingTF(x) 
@@ -89,9 +76,8 @@ def main():
     
     #cache or persist the output of section 1
     tfDocData.persist()
-    print "tfDocData printing"
+
     print tfDocData.take(1)
-    print "section 1 finished"
 #==============================================================================
 # Section 2: GETTING LABELS OF TRAINING DATA , O/P OF SECTION:(FILE NAME,LABEL) OF TRAINING DATA
 #==============================================================================
@@ -106,29 +92,20 @@ def main():
     
     #Cache/persist output of section 2
     joinNameLabel.persist()
-    print "joinNameLabel printing"
-    joinNameLabel.take(1)
-    print "total train samples- joinNameLabel count"
-    print joinNameLabel.count()
-    print "section 2 completed"
+
 #==============================================================================
 #  Section 3: Join the tf of byte files with labels for analysis and convert into Labelled Point to feed it into classifier.
 #             O/P of section: LabelledPoint(LABEL, TF)
 #==============================================================================
     #O/P: (LABEL,TF)
-    joinCleanDocLabel = joinNameLabel.join(tfDocData).map(lambda (x,y):y) 
-    print "joinCleanDocLabel printing"
-    print joinCleanDocLabel.take(1)
-    print "joinCleanDocLabel count"
-    print joinCleanDocLabel.count()
+    joinCleanDocLabel = joinNameLabel.join(tfDocData).map(lambda (x,y):y)
+    
     #O/P: LabelledPoint(LABEL,TF)
     hashData = joinCleanDocLabel.map(lambda (label,text): LabeledPoint(label,text))
     
     #Persist/cache the output of section 3
     hashData.persist()
-    print "hashData printing"
-    print hashData.take(1)
-    print "section 3 completed"
+  
 #==============================================================================
 # Section 4: Apply Random Forest Classifier and generate model on hashData using gini impurity.
 #            Determined heurestically that 50 trees with depth of 8 give best accuracy.
@@ -136,27 +113,20 @@ def main():
     model = RandomForest.trainClassifier(hashData, numClasses=9, categoricalFeaturesInfo={},
                                       numTrees=50, featureSubsetStrategy="auto",
                                       impurity='gini', maxDepth=8, maxBins=32)
-    print "successfully built model.section 4 completed"                                
+                                
 #==============================================================================
 # Section 5: Generate test data in the format for prediction. O/P of section: ()                        
 #==============================================================================
                                       
     #O/P: (INDEX,FILENAME)
     nameTestData=sc.textFile(nameTestPath,25).map(lambda x: bytePath+"/"+x+".bytes").zipWithIndex()
-    print "nameTestData printing"
-    print nameTestData.take(1)
+
     #O/P: (INDEX,FILENAME,TF)
     joinTestDocLabel=nameTestData.join(tfDocData).map(lambda (x,y):(x,y[0],y[1]))
-    print "joinTestDocLabel printing"
-    print joinTestDocLabel.take(1)
-    print "joinTestDocLabel count"
-    print joinTestDocLabel.count()
+  
     #O/P: (INDEX,(INDEX,FILENAME,TF))
     joinTestDocLabel1=joinTestDocLabel.zipWithIndex().map(lambda (x,y):(y,x))
 
-    print "joinTestDocLabel1 printing"
-    joinTestDocLabel1.take(1)
-    print "section 5 complete"
 #==============================================================================
 # Section 6: Prediction of Labels and saving the output in a RDD which is saved as text file on s3.
 #==============================================================================
@@ -164,54 +134,36 @@ def main():
     prediction = model.predict(joinTestDocLabel1.map(lambda (x,(y,z,w)):w))
     #O/P: (INDEX,FILENAME,PREDICTEDLABEL)
     fullPred = joinTestDocLabel.map(lambda (x,y,z):(x,y)).zip(prediction)
-    print "fullPred printing"
-    fullPred.take(1)
+
     #O/P: STRING < FILENAME PREDICTEDLABEL>
     fullPred1 = fullPred.map(lambda ((x,y),z):str(x) + " "+ str(z+1))
-    print "fullPred1 printing"
-    for x in fullPred1.collect():
-        print x   
     
     #Save string<filename predictedlabel> RDD on s3
-    fullPred1.saveAsTextFile("s3n://pkey-bucket/output14.txt")  
-    print 'fullPred1 saved'
-    print "Section 6 complete"
+    fullPred1.saveAsTextFile("s3n://pkey-bucket/outputfinal1.txt")
+    
 #==============================================================================
 # Section 7: Convert the predictions into output file format having only labels as integers in each line.This can be fed to autolab.
 #==============================================================================
 
-    #op = sc.textFile("s3n://pkey-bucket/output/op2.txt").map(lambda x:x.encode("utf-8")).map(lambda x: x.split()).map(lambda (x,y):(x,float(y)))
-
-    #O/P: ()
+    #O/P: (FILENAME,LABEL)
     op = fullPred1.map(lambda x: x.split()).map(lambda (x,y):(x,float(y)))
-    print "op printing"
-    print op.take(1)
-    print "Size of op"
-    print op.count()
+   
     #O/P: (FILENAME, INT(PREDICTEDLABEL))
     op1 = op.map(lambda (x,y):(x,int(y)))
-    print "op1 printing"
-    print op1.take(1)
-    #xtest = sc.textFile(nameTestPath).map(lambda x: bytePath+"/"+x+".bytes").zipWithIndex().map(lambda (x,y):(x.encode("utf-8"),y))
+
     #O/P: (FILENAME,INDEX)
     xtest = nameTestData.map(lambda (x,y):(x.encode("utf-8"),y))
-    print "xtest printing"
-    print xtest.take(1)
-    print "xtest count"
-    print xtest.count()
+  
     #O/P: (INDEX,PREDICTED LABEL)
     joinOpXtest = xtest.join(op1).map(lambda (x,y):y)
-    print "joinOpXtest printing"
-    joinOpXtest.take(1)
-    print "joinOpXtest size printing"
-    print joinOpXtest.count()
+
     #O/P: Sort by index so that predictedlabels are in order.
     j = joinOpXtest.sortByKey()
     #O/P : LABELS
     final = j.map(lambda (x,y):y)
     #Save labels as text file on s3
-    final.saveAsTextFile("s3n://pkey-bucket/finalOutput14.txt")
-    print "final"
+    final.saveAsTextFile("s3n://pkey-bucket/outputfinal2.txt")
+    print "final predictions"
     for x in final.collect():
         print x
     
