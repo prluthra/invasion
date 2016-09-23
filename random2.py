@@ -11,19 +11,25 @@ Created on Mon Sep 19 07:26:12 2016
 # Outputs sorted labels in textfile as outputfinal2.txt => int(label)
 # Accuracy = 95%
 # RunTime = 38 min(approx) on 2 r3.4xlarge nodes with parameters as specified in Readme.
-# This is final script which takes 5 command line arguements:<bytePath> <namePath> <nameTestPath> <classPath> <aws_id> <aws_key>
-#bytePath = "s3n://eds-uga-csci8360/data/project2/binaries" 
+# This is final script which takes 8 command line arguements:<bytePath> <namePath> <nameTestPath> <classPath> <aws_id> <aws_key> <output_file1> <output_file2>
+#bytePath = s3n://eds-uga-csci8360/data/project2/binaries 
 #//s3 path for folder with all .byte files
-#namePath = "s3n://eds-uga-csci8360/data/project2/labels/X_train.txt"
+#namePath = s3n://eds-uga-csci8360/data/project2/labels/X_train.txt
 #//s3 path for file having file names of training docs
-#nameTestPath="s3n://eds-uga-csci8360/data/project2/labels/X_test.txt"
+#nameTestPath=s3n://eds-uga-csci8360/data/project2/labels/X_test.txt
 #//s3 path for file having file names of test docs
-#classPath = "s3n://eds-uga-csci8360/data/project2/labels/y_train.txt"
+#classPath = s3n://eds-uga-csci8360/data/project2/labels/y_train.txt
 #//s3 path for file having labels/classes of training docs
-#aws_id = “xxxx”
+#aws_id = xxxx
 #//your aws id
-#aws_key = “xxxx”
+#aws_key = xxxx
 #//your aws key
+#output_file1 = s3n://pkey-bucket/outputfinal1.txt
+#//output file location on s3 where you want to store output as string(filename label) in each line
+
+#output_file2 = s3n://pkey-bucket/outputfinal2.txt
+#//output file location on s3 where you want to store output as int(label) in each line sorted according to test set provided. This can be directly fed to autolab
+
 #==============================================================================
 
 #Imports
@@ -154,7 +160,7 @@ def main():
     fullPred1 = fullPred.map(lambda ((x,y),z):str(x) + " "+ str(z+1))
     
     #Save string<filename predictedlabel> RDD on s3
-    fullPred1.saveAsTextFile("s3n://pkey-bucket/outputfinal1.txt")
+    fullPred1.saveAsTextFile(sys.argv[7])
     
 #==============================================================================
 # Section 7: Convert the predictions into output file format having only labels as integers in each line.This can be fed to autolab.
@@ -177,7 +183,7 @@ def main():
     #O/P : LABELS
     final = j.map(lambda (x,y):y)
     #Save labels as text file on s3
-    final.saveAsTextFile("s3n://pkey-bucket/outputfinal2.txt")
+    final.saveAsTextFile(sys.argv[8])
     print "final predictions"
     for x in final.collect():
         print x
